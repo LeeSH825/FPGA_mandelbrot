@@ -86,6 +86,57 @@ module HDMI_TOP(
         .o_sy(sy)
     );
 
+    wire clk_1s;
+
+    clk_1s_generator clk_slow (
+        .clk(CLK),
+        .resetn(rst),
+        .clk_1s(clk_1s)
+    );
+
+    wire btn_debounced;
+    reg sig_dly;
+
+    always @(posedge CLK) begin
+        sig_dly <= btn1;
+    end
+
+    assign btn_debounced = btn1 & ~sig_dly;
+
+    reg [1:0] zoom_level;
+
+    always@(posedge CLK) begin
+        if (rst == 1) begin
+            zoom_level = 0;
+        end
+        if (btn_debounced == 1) begin
+            if (sw0 == 1) begin         // Zoom In
+                if (zoom_level < 3) begin
+                    zoom_level <= zoom_level + 1;
+                end
+                else begin
+                    zoom_level <= zoom_level;
+                end
+            end
+            else begin                  // Zoom Out
+                if (zoom_level > 0) begin
+                    zoom_level <= zoom_level - 1;
+                end
+                else begin
+                    zoom_level <= zoom_level;
+                end
+            end
+        end
+        else begin
+            zoom_level <= zoom_level;
+        end
+    end
+    assign {led5_r, led5_b} = zoom_level;
+
+    wire MBT_engine_rst;
+
+    assign MBT_engine_rst = btn1 ? 1 : rst;
+
     // test card colour output
     wire [7:0] red;
     wire [7:0] green;
@@ -100,10 +151,12 @@ module HDMI_TOP(
 
     MBT_engine engine(
         .clk_fast(CLK),
-        .rst(rst),
+        .rst(MBT_engine_rst),
         .x_min(16'hf000),
         .y_max(16'h0960),
-        .zoom_level(2'b00),
+        // .x_min(32'hffc00000),
+        // .y_max(32'h00258000),
+        .zoom_level(zoom_level),
         .WEA(wea),
         .addr(addr),
         // .DBG_state({ready, led3}),
@@ -111,18 +164,27 @@ module HDMI_TOP(
         .ready(ready)
     );
 
+    reg [3:0] wea_r;
+    reg [18:0] addr_r;
+    reg [31:0] dout_r;
+
+    always @(posedge CLK) begin
+        wea_r <= wea;
+        addr_r <= addr;
+        dout_r <= dout;
+    end
+
     // assign led3 = |addr;
     // assign led5_g = |dout;
-    assign {led4_r, led5_r, led5_g, led5_b, led3} = addr[10:6];
+    // assign {led4_r, led5_r, led5_g, led5_b, led3} = addr[10:6];
     // assign {led3} = addr[10];
     // assign {led4_r, led5_r, led5_g, led5_b} = {dout[24], dout[16], dout[8],dout[0]};
 
     blk_mem_gen_0 BRAM(
         .clka(CLK),
-        .addra(addr),
-        .dina(dout),
-        // .wea({4{|wea}}),
-        .wea(wea),
+        .addra(addr_r),
+        .dina(dout_r),
+        .wea(wea_r),
 
         .clkb(pix_clk),
         .addrb(addrb),
@@ -143,13 +205,53 @@ module HDMI_TOP(
         .addr(addrb)
     );
 
+    wire [7:0] mbt_red, mbt_green, mbt_blue;
+
     palette colormap (
-        .din({1'b1, doutb[6:0]}),
+        // .din({1'b1, doutb[6:0]}),
+        .din(doutb),
         .mode(sw1),
-        .o_RED(red),
-        .o_GREEN(green),
-        .o_BLUE(blue)
+        .o_RED(mbt_red),
+        .o_GREEN(mbt_green),
+        .o_BLUE(mbt_blue)
     );
+    reg [7:0] r_red;
+    reg [7:0] r_green;
+    reg [7:0] r_blue;
+    assign red = r_red;
+    assign green = r_green;
+    assign blue = r_blue;
+    wire [7:0] sprite_red, sprite_green, sprite_blue;
+    wire sprite_hit;
+
+    sprite_compositor pointer(
+        .i_x        (sx),
+        .i_y        (sy),
+        .i_v_sync   (v_sync),
+        
+        .rst(rst),
+        .btn2(btn2),
+        .btn3(btn3),
+        .sw(sw0),
+        
+        .o_red      (sprite_red),
+        .o_green    (sprite_green),
+        .o_blue     (sprite_blue),
+        .o_sprite_hit   (sprite_hit)
+    );
+    
+    always @(*) begin
+        if (sprite_hit == 1) begin
+            r_red <= sprite_red;
+            r_green <= sprite_green;
+            r_blue <= sprite_blue;
+        end
+        else begin
+            r_red <= mbt_red;
+            r_green <= mbt_green;
+            r_blue <= mbt_blue;
+        end
+    end
 
     // gfx gfx_inst (
     //     .i_y(sy),

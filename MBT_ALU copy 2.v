@@ -4,7 +4,7 @@
 **
 ** fixed point (16-bit, (11,16))
 ** 		=> Sign: 1-bit, Exp: 4-bit, Frac: 11-bit
-** 		=> Expression Range: -16 ~ N-1.99951171875
+** 		=> Expression Range: -16 ~ 15.99951171875
 ** 		=> Resolution: 0.00048828125
 ** |1|<- 4 bits ->|<- 11 bits ->|
 ** |S|       IIII|   FFFFFFFFFFF|
@@ -26,36 +26,29 @@
 ** end
 */
 
-module MBT_ALU #(
-	// Parameterized values
-	parameter Q = 21,
-	parameter N = 32
-	)
-	(
+module MBT_ALU(
     input wire clk,
     input wire rst,
     input wire start,
-    input wire [N-1:0] c_real,
-    input wire [N-1:0] c_img,
+    input wire [15:0] c_real,
+    input wire [15:0] c_img,
     // input wire zoom_level,
 
     // DEBUG
     // output wire DBG_state,
-    // output wire [N-1:0] DBG_real,
-	// output wire [N-1:0] DBG_img,
+    // output wire [15:0] DBG_real,
+	// output wire [15:0] DBG_img,
 
     output wire valid,
     output wire [6:0] d_out
     );
 
     // FSM Param
-    reg [2:0] state;
-    parameter IDLE = 3'b000;
-	parameter INIT1 = 3'b001;
-	parameter INIT2 = 3'b011;
-	parameter INIT3 = 3'b111;
-    parameter CALC = 3'b110;
-	parameter FIN  = 3'b100;
+    reg [1:0] state;
+    parameter IDLE = 2'b00;
+	parameter INIT = 2'b10;
+    parameter CALC = 2'b11;
+	parameter FIN  = 2'b01;
 
     // CALC Flag
     reg is_finished;
@@ -66,22 +59,21 @@ module MBT_ALU #(
 	localparam TWO = 16'h1000;
 	localparam FOUR = 16'h2000;
 
-	wire [N-1:0] threshold_w;
-	reg [N-1:0] threshold_r;
+	wire [15:0] threshold;
 
 
 	// To find z_n1_real
-	wire [N-1:0] z_n_real_sq_w, z_n_img_sq_w;
-	wire [N-1:0] sq_sub_w;
-	wire [N-1:0] z_n1_real_w;
+	wire [15:0] z_n_real_sq_w, z_n_img_sq_w;
+	wire [15:0] sq_sub_w;
+	wire [15:0] z_n1_real_w;
 	// To find z_n1_img
-	wire [N-1:0] z_n1_img_w_stage1, z_n1_img_w_stage2;
-	wire [N-1:0] z_n1_img_w;
+	wire [15:0] z_n1_img_w_stage1, z_n1_img_w_stage2;
+	wire [15:0] z_n1_img_w;
 	// To fond z_n1_abs
-	wire [N-1:0] z_n1_real_sq_w, z_n1_img_sq_w;
-	wire [N-1:0] z_n1_abs_w;
+	wire [15:0] z_n1_real_sq_w, z_n1_img_sq_w;
+	wire [15:0] z_n1_abs_w;
 	// z from last iter
-	reg [N-1:0] z_n_real_r, z_n_img_r;
+	reg [15:0] z_n_real_r, z_n_img_r;
 
 	// State Transition Block
     always@(posedge clk) begin
@@ -92,33 +84,17 @@ module MBT_ALU #(
             case(state)
             IDLE : begin
                 if (start == 1)begin
-                    state <= INIT1;
+                    state <= INIT;
                 end
                 else begin
                     state <= IDLE;
                 end
             end
-			INIT1: begin
+			INIT: begin
 				if (is_finished == 1) begin
                 	state <= FIN;
 				end
 				else  begin
-					state <= INIT2;
-				end
-			end
-			INIT2: begin
-				if (is_finished == 1) begin
-					state <= FIN;
-				end
-				else begin
-					state <= INIT3;
-				end
-			end
-			INIT3: begin
-				if (is_finished == 1) begin
-					state <= FIN;
-				end
-				else begin
 					state <= CALC;
 				end
 			end
@@ -127,7 +103,7 @@ module MBT_ALU #(
                 	state <= FIN;
 				end
 				else  begin
-					state <= INIT1;
+					state <= INIT;
 				end
             end
 			FIN : begin
@@ -152,9 +128,6 @@ module MBT_ALU #(
 			z_n1_real_r <= 0;
 			z_n1_img_r <= 0;
 			z_n1_abs_r <= 0;
-			z_n1_img_r_stage1 <= 0;
-			z_n_real_sq_r <= 0;
-			z_n_img_sq_r <= 0;
         end
         case (state)
         IDLE: begin
@@ -166,27 +139,8 @@ module MBT_ALU #(
 			z_n1_real_r <= 0;
 			z_n1_img_r <= 0;
 			z_n1_abs_r <= 0;
-			z_n1_img_r_stage1 <= 0;
-			z_n_real_sq_r <= 0;
-			z_n_img_sq_r <= 0;
         end
-		INIT1: begin   				// Find z_n1 : STAGE 1
-			iter <= iter;
-			is_finished <= is_finished;
-			z_n_real_r <= z_n_real_r;
-			z_n_img_r <= z_n_img_r;
-			// get z_n1_real_r
-			z_n1_real_r <= z_n1_real_r;
-			z_n1_img_r <= z_n1_img_r;
-
-			z_n1_abs_r <= z_n1_abs_r;
-			// get stage1
-			z_n1_img_r_stage1 <= z_n1_img_w_stage1;
-			//
-			z_n_real_sq_r <= z_n_real_sq_w;
-			z_n_img_sq_r <= z_n_img_sq_w;
-		end
-		INIT2: begin   				// Find z_n1 : STAGE 2
+		INIT: begin
 			iter <= iter;
 			is_finished <= is_finished;
 			z_n_real_r <= z_n_real_r;
@@ -196,26 +150,6 @@ module MBT_ALU #(
 			z_n1_img_r <= z_n1_img_w;
 
 			z_n1_abs_r <= z_n1_abs_r;
-			// get stage1
-			z_n1_img_r_stage1 <= z_n1_img_r_stage1;
-			//
-			z_n_real_sq_r <= z_n_real_sq_r;
-			z_n_img_sq_r <= z_n_img_sq_r;
-		end
-		INIT3: begin   				// Find z_n1_abs
-			iter <= iter;
-			is_finished <= is_finished;
-			z_n_real_r <= z_n_real_r;
-			z_n_img_r <= z_n_img_r;
-			// get z_n1_real_r & z_n1_img_r
-			z_n1_real_r <= z_n1_real_r;
-			z_n1_img_r <= z_n1_img_r;
-
-			z_n1_abs_r <= z_n1_abs_w;
-			// get stage1
-			z_n1_img_r_stage1 <= z_n1_img_r_stage1;
-			z_n_real_sq_r <= z_n_real_sq_r;
-			z_n_img_sq_r <= z_n_img_sq_r;
 		end
         CALC: begin
 			if (iter == 99) begin 	// calc finished
@@ -226,13 +160,10 @@ module MBT_ALU #(
 				z_n1_real_r <= z_n1_real_r;
 				z_n1_img_r <= z_n1_img_r;
 				z_n1_abs_r <= z_n1_abs_r;
-				z_n1_img_r_stage1 <= z_n1_img_r_stage1;
-				z_n_real_sq_r <= z_n_real_sq_r;
-				z_n_img_sq_r <= z_n_img_sq_r;
 			end
 			else if (iter < 99) begin // Still have to Calculate
 				if (is_finished == 0) begin
-					if (threshold_w[N-1] == 0) begin 	// If threshold is (+) it means z_n1 exceeds 2
+					if (threshold[15] == 0) begin 	// If threshold is (+) it means z_n1 exceeds 2
 						iter <= iter;
 						is_finished <= 1;
 					end
@@ -246,10 +177,7 @@ module MBT_ALU #(
 					z_n1_real_r <= z_n1_real_r;
 					z_n1_img_r <= z_n1_img_r;
 					// get z_n1_abs
-					z_n1_abs_r <= z_n1_abs_r;
-					z_n1_img_r_stage1 <= z_n1_img_r_stage1;
-					z_n_real_sq_r <= z_n_real_sq_r;
-					z_n_img_sq_r <= z_n_img_sq_r;
+					z_n1_abs_r <= z_n1_abs_w;
 				end
 				else begin 					// Calc Finished
 					iter <= iter;
@@ -260,9 +188,6 @@ module MBT_ALU #(
 					z_n1_real_r <= z_n1_real_r;
 					z_n1_img_r <= z_n1_img_r;
 					z_n1_abs_r <= z_n1_abs_r;
-					z_n1_img_r_stage1 <= z_n1_img_r_stage1;
-					z_n_real_sq_r <= z_n_real_sq_r;
-					z_n_img_sq_r <= z_n_img_sq_r;
 				end
 			end
 			else begin // Same as default
@@ -274,9 +199,6 @@ module MBT_ALU #(
 				z_n1_real_r <= z_n1_real_r;
 				z_n1_img_r <= z_n1_img_r;
 				z_n1_abs_r <= z_n1_abs_r;
-				z_n1_img_r_stage1 <= z_n1_img_r_stage1;
-				z_n_real_sq_r <= z_n_real_sq_r;
-				z_n_img_sq_r <= z_n_img_sq_r;
 			end
         end
 		FIN : begin
@@ -287,9 +209,6 @@ module MBT_ALU #(
 			z_n1_real_r <= z_n1_real_r;
 			z_n1_img_r <= z_n1_img_r;
 			z_n1_abs_r <= z_n1_abs_r;
-			z_n1_img_r_stage1 <= z_n1_img_r_stage1;
-			z_n_real_sq_r <= z_n_real_sq_r;
-			z_n_img_sq_r <= z_n_img_sq_r;
 		end
         default: begin
 			iter <= 0;
@@ -300,17 +219,12 @@ module MBT_ALU #(
 			z_n1_real_r <= 0;
 			z_n1_img_r <= 0;
 			z_n1_abs_r <= 0;
-			z_n1_img_r_stage1 <= 0;
-			z_n_real_sq_r <= 0;
-			z_n_img_sq_r <= 0;
         end
         endcase
     end
 
-	reg [N-1:0] z_n1_real_r, z_n1_img_r;
-	reg [N-1:0] z_n_real_sq_r, z_n_img_sq_r;
-	reg [N-1:0] z_n1_abs_r;
-	reg [N-1:0] z_n1_img_r_stage1;
+	reg [15:0] z_n1_real_r, z_n1_img_r;
+	reg [15:0] z_n1_abs_r;
 
 	// always @(posedge clk) begin
 	// 	if (rst == 1) begin
@@ -328,36 +242,33 @@ module MBT_ALU #(
 	/*********************************
 	**  FIND z_n1_real -> Start      **
 	*********************************/
-	qmult #(Q,N) uut_z_n_real_sq_w (	// (z_n_real)^2
+	qmult #(11,16) uut_z_n_real_sq_w (	// (z_n_real)^2
 		.i_multiplicand(z_n_real_r), 
 		.i_multiplier(z_n_real_r), 
 		.o_result(z_n_real_sq_w)
 		// .ovr(ovp)
 	);
 
-	qmult #(Q,N) uut_z_n_img_sq_w (	// (z_n_img)^2
+	qmult #(11,16) uut_z_n_img_sq_w (	// (z_n_img)^2
 		.i_multiplicand(z_n_img_r), 
 		.i_multiplier(z_n_img_r), 
 		.o_result(z_n_img_sq_w)
 		// .ovr(ovp)
 	);
-	
-	// INIT1
-	//---------------------------------
-	// INIT2
 
-	qadd #(Q,N) uut_sq_subtract (	// (z_n_real)^2 - (z_n_img)^2
-		.a(z_n_real_sq_r), 
-		.b(-z_n_img_sq_r), 
+
+	qadd #(11,16) uut_sq_subtract (	// (z_n_real)^2 - (z_n_img)^2
+		.a(z_n_real_sq_w), 
+		.b(-z_n_img_sq_w), 
 		.c(sq_sub_w)
 	);
 
-	qadd #(Q,N) uut_z_n1_real_stage2 (	// (z_n_real)^2 - (z_n_img)^2 + C_real
+	qadd #(11,16) uut_z_n1_real_stage2 (	// (z_n_real)^2 - (z_n_img)^2 + C_real
 		.a(sq_sub_w), 
 		.b(c_real), // toggle
 		.c(z_n1_real_w)
 	);
-	// INIT2
+	
 	/*********************************
 	**  FIND z_n1_real -> Finish    **
 	*********************************/
@@ -366,30 +277,25 @@ module MBT_ALU #(
 	/*********************************
 	**  FIND z_n1_img -> Start      **
 	*********************************/
-	qmult #(Q,N) uut_z_n1_img_w_stage1 (	// 2 * z_n_real
+	qmult #(11,16) uut_z_n1_img_w_stage1 (	// 2 * z_n_real
 		.i_multiplicand(TWO), 
 		.i_multiplier(z_n_real_r), 
 		.o_result(z_n1_img_w_stage1)
 		// .ovr(ovp)
 	);
 
-	// INIT1
-	// ------------------------------------
-	// INIT2
-
-	qmult #(Q,N) uut_z_n1_img_w_stage2 (	// 2 * z_n_real * z_n_img
-		.i_multiplicand(z_n1_img_r_stage1), 
+	qmult #(11,16) uut_z_n1_img_w_stage2 (	// 2 * z_n_real * z_n_img
+		.i_multiplicand(z_n1_img_w_stage1), 
 		.i_multiplier(z_n_img_r), 
 		.o_result(z_n1_img_w_stage2)
 		// .ovr(ovp)
 	);
 
-	qadd #(Q,N) uut_z_n1_img_w (			// 2 * z_n_real * z_n_img + C_img
+	qadd #(11,16) uut_z_n1_img_w (			// 2 * z_n_real * z_n_img + C_img
 		.a(z_n1_img_w_stage2), 
 		.b(c_img), // toggle
 		.c(z_n1_img_w)
 	);
-	// INIT2
 	/*********************************
 	**  FIND z_n1_img -> Finish     **
 	*********************************/
@@ -398,27 +304,25 @@ module MBT_ALU #(
 	/*********************************
 	**  FIND z_n1_abs -> Start      **
 	*********************************/
-	// INIT3
-	qmult #(Q,N) uut_z_n1_real_sq_w (		// (z_n1_real)^2
+	qmult #(11,16) uut_z_n1_real_sq_w (		// (z_n1_real)^2
 		.i_multiplicand(z_n1_real_r), 
 		.i_multiplier(z_n1_real_r), 
 		.o_result(z_n1_real_sq_w)
 		// .ovr(ovp)
 	);
 
-	qmult #(Q,N) uut_z_n1_img_sq_w (		// (z_n1_img)^2
+	qmult #(11,16) uut_z_n1_img_sq_w (		// (z_n1_img)^2
 		.i_multiplicand(z_n1_img_r), 
 		.i_multiplier(z_n1_img_r), 
 		.o_result(z_n1_img_sq_w)
 		// .ovr(ovp)
 	);
 
-	qadd #(Q,N) uut_z_n1_abs_w (			// (z_n1_real)^2 + (z_n1_img)^2
+	qadd #(11,16) uut_z_n1_abs_w (			// (z_n1_real)^2 + (z_n1_img)^2
 		.a(z_n1_real_sq_w), 
 		.b(z_n1_img_sq_w),
 		.c(z_n1_abs_w)
 	);
-	// INIT3
 
 	/*********************************
 	**  FIND z_n1_abs -> Finish     **
@@ -428,10 +332,10 @@ module MBT_ALU #(
 	/*********************************
 	**  FIND threshold -> Start     **
 	*********************************/
-	qadd #(Q,N) uut_threshold_subtract (	// (z_n1_real)^2 + (z_n1_img)^2 - r
-		.a(z_n1_abs_r), 
+	qadd #(11,16) uut_threshold_subtract (	// (z_n1_real)^2 + (z_n1_img)^2 - r
+		.a(z_n1_abs_w), 
 		.b(-FOUR), // toggle
-		.c(threshold_w)
+		.c(threshold)
 	);
 	/*********************************
 	**  FIND threshold -> Finish    **

@@ -25,8 +25,8 @@ module MBT_engine(
     output DBG_response,
     output [3:0] DBG_MBT_response,
 
-    input wire [31:0] x_min,
-    input wire [31:0] y_max,
+    input wire [15:0] x_min,
+    input wire [15:0] y_max,
     input wire [1:0] zoom_level,
     output wire [31:0] d_out,
     output wire ready
@@ -64,8 +64,7 @@ module MBT_engine(
         .rst_MBT(resetMBT)
     );
 
-    fetch_param #(11,16) MBT_DISTRIBUTOR(
-        .clk(clk_fast),
+    fetch_param MBT_DISTRIBUTOR(
         .i_x(i_x_w),
         .i_y(i_y_w),
         .x_min(x_min),
@@ -85,66 +84,49 @@ module MBT_engine(
         .c_img_3(c_img_3)
     );
 
-    reg start2MBT_r, rst2MBT_r;
-    reg [15:0] c_real_0_r, c_img_0_r, c_real_1_r, c_img_1_r, c_real_2_r, c_img_2_r, c_real_3_r, c_img_3_r;
-
-    always @(posedge clk_fast) begin
-        start2MBT_r <= start2MBT;
-        rst2MBT_r <= rst2MBT;
-        c_real_0_r <= c_real_0;
-        c_img_0_r <= c_img_0;
-        c_real_1_r <= c_real_1;
-        c_img_1_r <= c_img_1;
-        c_real_2_r <= c_real_2;
-        c_img_2_r <= c_img_2;
-        c_real_3_r <= c_real_3;
-        c_img_3_r <= c_img_3;
-    end
-
-    MBT_ALU #(11,16) mbt_module_0(
+    MBT_ALU mbt_module_0(
         .clk(clk_fast),
-        .rst(rst2MBT_r),
-        .start(start2MBT_r),
-        .c_real(c_real_0_r),
-        .c_img(c_img_0_r),
+        .rst(rst2MBT),
+        .start(start2MBT),
+        .c_real(c_real_0),
+        .c_img(c_img_0),
         // .DBG_state(MBT_response[0]),
         .valid(valid[0]),
         .d_out(d_out0)
     );
 
-    MBT_ALU #(11,16) mbt_module_1(
+    MBT_ALU mbt_module_1(
         .clk(clk_fast),
-        .rst(rst2MBT_r),
-        .start(start2MBT_r),
-        .c_real(c_real_1_r),
-        .c_img(c_img_1_r),
+        .rst(rst2MBT),
+        .start(start2MBT),
+        .c_real(c_real_1),
+        .c_img(c_img_1),
         // .DBG_state(MBT_response[1]),
         .valid(valid[1]),
         .d_out(d_out1)
     );
 
-    MBT_ALU #(11,16) mbt_module_2(
+    MBT_ALU mbt_module_2(
         .clk(clk_fast),
-        .rst(rst2MBT_r),
-        .start(start2MBT_r),
-        .c_real(c_real_2_r),
-        .c_img(c_img_2_r),
+        .rst(rst2MBT),
+        .start(start2MBT),
+        .c_real(c_real_2),
+        .c_img(c_img_2),
         // .DBG_state(MBT_response[2]),
         .valid(valid[2]),
         .d_out(d_out2)
     );
 
-    MBT_ALU #(11,16) mbt_module_3(
+    MBT_ALU mbt_module_3(
         .clk(clk_fast),
-        .rst(rst2MBT_r),
-        .start(start2MBT_r),
-        .c_real(c_real_3_r),
-        .c_img(c_img_3_r),
+        .rst(rst2MBT),
+        .start(start2MBT),
+        .c_real(c_real_3),
+        .c_img(c_img_3),
         // .DBG_state(MBT_response[3]),
         .valid(valid[3]),
         .d_out(d_out3)
     );
-
 
     MBT_output_interface MBT_Interface(
         .clk(clk_fast),
