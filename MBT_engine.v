@@ -64,7 +64,7 @@ module MBT_engine(
         .rst_MBT(resetMBT)
     );
 
-    fetch_param #(11,16) MBT_DISTRIBUTOR(
+    fetch_param #(11,16, 24) MBT_DISTRIBUTOR(
         .clk(clk_fast),
         .i_x(i_x_w),
         .i_y(i_y_w),
@@ -84,6 +84,8 @@ module MBT_engine(
         .c_real_3(c_real_3),
         .c_img_3(c_img_3)
     );
+
+
 
     reg start2MBT_r, rst2MBT_r;
     reg [15:0] c_real_0_r, c_img_0_r, c_real_1_r, c_img_1_r, c_real_2_r, c_img_2_r, c_real_3_r, c_img_3_r;

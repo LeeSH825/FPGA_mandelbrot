@@ -9,12 +9,6 @@ module MBT_controller(
 	// DBG
 	output wire [1:0] DBG_controller_state,
 
-	// neg slack -> changed to register
-    // output wire [15:0] i_x,
-    // output wire [15:0] i_y,
-	// output wire start,
-    // output wire ready,
-    // output wire rst_MBT
 	output reg [15:0] i_x,
     output reg [15:0] i_y,
 	output reg start,
@@ -46,12 +40,7 @@ module MBT_controller(
         else begin
             case(state)
             IDLE: begin
-                if (mbt_response == 1) begin
-                    state <= WORK;
-                end
-                else begin
-                    state <= WORK;
-                end
+                state <= WORK;
             end
             WORK: begin
 				if (finished == 1) begin
@@ -62,26 +51,12 @@ module MBT_controller(
 				end
             end
             WAIT: begin
-                // if (mbt_response == 1) begin
-                //     if (finished == 1) begin
-                //         state <= FINISH;
-                //     end
-                //     else begin
-                //         state <= WORK;
-                //     end
-                // end
-                // else begin
-                //     state <= WAIT;
-                // end
-
-				// else begin
-					if (mbt_response == 1) begin
-						state <= WORK;
-					end
-					else begin
-						state <= WAIT;
-					end
-				// end
+                if (mbt_response == 1) begin
+                    state <= WORK;
+                end
+                else begin
+                    state <= WAIT;
+                end
             end
             FINISH: begin
                 state <= FINISH;
@@ -169,13 +144,6 @@ module MBT_controller(
 		rst_MBT <= finished | mbt_response | init_mbt;
 		start = start_reg;
 	end
-
-	// neg slack -> changed to register
-    // assign i_x = current_X;
-    // assign i_y = current_Y;
-    // assign ready = finished;
-	// assign rst_MBT = finished | mbt_response | init_mbt;
-	// assign start = start_reg;
 
 	// DBG
 	assign DBG_controller_state = state;

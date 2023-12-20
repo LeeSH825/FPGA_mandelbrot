@@ -86,51 +86,26 @@ module HDMI_TOP(
         .o_sy(sy)
     );
 
-    wire clk_1s;
+    // Zoom Level param
+    parameter LVL0 = 2'b00;
+    parameter LVL1 = 2'b01;
+    parameter LVL2 = 2'b10;
+    parameter LVL3 = 2'b11;
+    wire [1:0] zoom_level, zoom_level_last;
 
-    clk_1s_generator clk_slow (
+
+    wire [15:0] real_coord_X, real_coord_Y;
+    ZMU #(11, 16, 24) Zoom_Manegement_Unit(
         .clk(CLK),
-        .resetn(rst),
-        .clk_1s(clk_1s)
+        .rst(rst),
+        .pixel_coord_X(sprite_x_pos),
+        .pixel_coord_Y(sprite_y_pos),
+        .sw0(sw0),
+        .zoom_btn(btn1),
+        .zoom_level(zoom_level),
+        .real_coord_X(real_coord_X),
+        .real_coord_Y(real_coord_Y)
     );
-
-    wire btn_debounced;
-    reg sig_dly;
-
-    always @(posedge CLK) begin
-        sig_dly <= btn1;
-    end
-
-    assign btn_debounced = btn1 & ~sig_dly;
-
-    reg [1:0] zoom_level;
-
-    always@(posedge CLK) begin
-        if (rst == 1) begin
-            zoom_level = 0;
-        end
-        if (btn_debounced == 1) begin
-            if (sw0 == 1) begin         // Zoom In
-                if (zoom_level < 3) begin
-                    zoom_level <= zoom_level + 1;
-                end
-                else begin
-                    zoom_level <= zoom_level;
-                end
-            end
-            else begin                  // Zoom Out
-                if (zoom_level > 0) begin
-                    zoom_level <= zoom_level - 1;
-                end
-                else begin
-                    zoom_level <= zoom_level;
-                end
-            end
-        end
-        else begin
-            zoom_level <= zoom_level;
-        end
-    end
     assign {led5_r, led5_b} = zoom_level;
 
     wire MBT_engine_rst;
@@ -152,14 +127,11 @@ module HDMI_TOP(
     MBT_engine engine(
         .clk_fast(CLK),
         .rst(MBT_engine_rst),
-        .x_min(16'hf000),
-        .y_max(16'h0960),
-        // .x_min(32'hffc00000),
-        // .y_max(32'h00258000),
+        .x_min(real_coord_X),
+        .y_max(real_coord_Y),
         .zoom_level(zoom_level),
         .WEA(wea),
         .addr(addr),
-        // .DBG_state({ready, led3}),
         .d_out(dout),
         .ready(ready)
     );
@@ -174,11 +146,6 @@ module HDMI_TOP(
         dout_r <= dout;
     end
 
-    // assign led3 = |addr;
-    // assign led5_g = |dout;
-    // assign {led4_r, led5_r, led5_g, led5_b, led3} = addr[10:6];
-    // assign {led3} = addr[10];
-    // assign {led4_r, led5_r, led5_g, led5_b} = {dout[24], dout[16], dout[8],dout[0]};
 
     blk_mem_gen_0 BRAM(
         .clka(CLK),
@@ -190,14 +157,6 @@ module HDMI_TOP(
         .addrb(addrb),
         .doutb(doutb)
     );
-
-    // blk_mem_gen_1 BRAM_SINGLE (
-    //     .clka(pix_clk),
-    //     .addra(addrb),
-    //     .dina(0),
-    //     .douta(doutb),
-    //     .wea(0)
-    // );
 
     addr_decoder_8bit O_Decoder (
         .i_x(sx),
@@ -224,15 +183,20 @@ module HDMI_TOP(
     wire [7:0] sprite_red, sprite_green, sprite_blue;
     wire sprite_hit;
 
+    wire [15:0] sprite_x_pos, sprite_y_pos;
+
     sprite_compositor pointer(
         .i_x        (sx),
         .i_y        (sy),
         .i_v_sync   (v_sync),
         
-        .rst(rst),
+        .rst(MBT_engine_rst),
         .btn2(btn2),
         .btn3(btn3),
         .sw(sw0),
+
+        .sprite_x_pos(sprite_x_pos),
+        .sprite_y_pos(sprite_y_pos),
         
         .o_red      (sprite_red),
         .o_green    (sprite_green),
@@ -252,20 +216,6 @@ module HDMI_TOP(
             r_blue <= mbt_blue;
         end
     end
-
-    // gfx gfx_inst (
-    //     .i_y(sy),
-    //     .i_x(sx),
-    //     .i_v_sync(v_sync),
-        
-    //     .btn1(btn1),
-    //     .btn2(btn2),
-    //     .btn3(btn3),
-        
-    //     .o_red(red),
-    //     .o_green(green),
-    //     .o_blue(blue)
-    //     );
 
     wire tmds_ch0_serial, tmds_ch1_serial, tmds_ch2_serial, tmds_chc_serial;
     HDMI_generator HDMI_out (
