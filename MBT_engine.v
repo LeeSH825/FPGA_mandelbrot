@@ -1,7 +1,11 @@
 `timescale 1ns / 1ps
 
 
-module MBT_engine(
+module MBT_engine#(
+    parameter Q = 21,
+    parameter N = 32,
+    parameter P = 24   // For under 16-bit precision
+    )(
     input wire clk_fast,
     // input clk_slow,
     input wire rst,
@@ -19,14 +23,14 @@ module MBT_engine(
 
 
     // DBG
-    output [15:0] DBG_I_X,
-    output [15:0] DBG_I_Y,
-    output [1:0] DBG_state,
-    output DBG_response,
-    output [3:0] DBG_MBT_response,
+    // output [15:0] DBG_I_X,
+    // output [15:0] DBG_I_Y,
+    // output [1:0] DBG_state,
+    // output DBG_response,
+    // output [3:0] DBG_MBT_response,
 
-    input wire [31:0] x_min,
-    input wire [31:0] y_max,
+    input wire [N-1:0] x_min,
+    input wire [N-1:0] y_max,
     input wire [1:0] zoom_level,
     output wire [31:0] d_out,
     output wire ready
@@ -44,7 +48,7 @@ module MBT_engine(
 
     wire mbt_response;
 
-    wire [15:0] c_real_0, c_img_0, c_real_1, c_img_1, c_real_2, c_img_2, c_real_3, c_img_3;
+    wire [N-1:0] c_real_0, c_img_0, c_real_1, c_img_1, c_real_2, c_img_2, c_real_3, c_img_3;
     wire [6:0] d_out0, d_out1, d_out2, d_out3;
 
 
@@ -64,7 +68,7 @@ module MBT_engine(
         .rst_MBT(resetMBT)
     );
 
-    fetch_param #(11,16, 24) MBT_DISTRIBUTOR(
+    fetch_param #(Q,N, P) MBT_DISTRIBUTOR(
         .clk(clk_fast),
         .i_x(i_x_w),
         .i_y(i_y_w),
@@ -88,7 +92,7 @@ module MBT_engine(
 
 
     reg start2MBT_r, rst2MBT_r;
-    reg [15:0] c_real_0_r, c_img_0_r, c_real_1_r, c_img_1_r, c_real_2_r, c_img_2_r, c_real_3_r, c_img_3_r;
+    reg [N-1:0] c_real_0_r, c_img_0_r, c_real_1_r, c_img_1_r, c_real_2_r, c_img_2_r, c_real_3_r, c_img_3_r;
 
     always @(posedge clk_fast) begin
         start2MBT_r <= start2MBT;
@@ -103,7 +107,7 @@ module MBT_engine(
         c_img_3_r <= c_img_3;
     end
 
-    MBT_ALU #(11,16) mbt_module_0(
+    MBT_ALU #(Q,N) mbt_module_0(
         .clk(clk_fast),
         .rst(rst2MBT_r),
         .start(start2MBT_r),
@@ -114,7 +118,7 @@ module MBT_engine(
         .d_out(d_out0)
     );
 
-    MBT_ALU #(11,16) mbt_module_1(
+    MBT_ALU #(Q,N) mbt_module_1(
         .clk(clk_fast),
         .rst(rst2MBT_r),
         .start(start2MBT_r),
@@ -125,7 +129,7 @@ module MBT_engine(
         .d_out(d_out1)
     );
 
-    MBT_ALU #(11,16) mbt_module_2(
+    MBT_ALU #(Q,N) mbt_module_2(
         .clk(clk_fast),
         .rst(rst2MBT_r),
         .start(start2MBT_r),
@@ -136,7 +140,7 @@ module MBT_engine(
         .d_out(d_out2)
     );
 
-    MBT_ALU #(11,16) mbt_module_3(
+    MBT_ALU #(Q,N) mbt_module_3(
         .clk(clk_fast),
         .rst(rst2MBT_r),
         .start(start2MBT_r),
@@ -169,10 +173,10 @@ module MBT_engine(
     );
 
     // DEBUG
-    assign DBG_I_X = i_x_w;
-    assign DBG_I_Y = i_y_w;
-    assign DBG_state = state;
-    assign DBG_response = mbt_response;
-    assign DBG_MBT_response = MBT_response;
+    // assign DBG_I_X = i_x_w;
+    // assign DBG_I_Y = i_y_w;
+    // assign DBG_state = state;
+    // assign DBG_response = mbt_response;
+    // assign DBG_MBT_response = MBT_response;
     assign rst_MBT = rst2MBT;
 endmodule

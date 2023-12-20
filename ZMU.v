@@ -48,8 +48,12 @@ module ZMU #(
 			zoom_level_r_last <= 0;
             zoom_pos_X_last <= zoom_pos_X[0];
 			zoom_pos_Y_last <= zoom_pos_Y[0];
-            zoom_pos_X[zoom_level_r] <= 16'hf000;
-            zoom_pos_Y[zoom_level_r] <= 16'h0960;
+            // FOR (11,16)
+            // zoom_pos_X[zoom_level_r] <= 16'hf000;                       // TODO: cahnge
+            // zoom_pos_Y[zoom_level_r] <= 16'h0960;
+            // FOR (21,32)
+            zoom_pos_X[zoom_level_r] <= 32'hffc00000;
+            zoom_pos_Y[zoom_level_r] <= 32'h00258000;
 			zoom_pos_X[zoom_level_r+1] <= zoom_pos_X[zoom_level_r+1];
 			zoom_pos_Y[zoom_level_r+1] <= zoom_pos_Y[zoom_level_r+1];
 			zoom_level_r <= 0;

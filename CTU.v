@@ -13,25 +13,25 @@ module CTU #(
     input wire [1:0] zoom_level,
     output wire [N-1:0] real_coord
     );
-
-	// FOR (11,16)
     // Grid => initial value: 1/2^(8) = 0.00390625
-    reg [N-1:0] grid_ROM [3:0];
-	reg [N-1:0] grid;
-    initial begin
-        grid_ROM[0] = 16'h0008;		// 1/2^(8) 	= 0.00390625		1
-        grid_ROM[1] = 16'h0004;		// 1/2^(9) 	= 0.001953125		0.5
-        grid_ROM[2] = 16'h0002;		// 1/2^(10) = 0.0009765625		0.25
-        grid_ROM[3] = 16'h0001;		// 1/2^(11) = 0.00048828125		0.125
-    end
-	// FOR (21,32)
-	// reg [N-1:0] grid_ROM [3:0];
-    // initial begin
-    //     grid_ROM[0] = 32'h00002000;		// 1/2^(8) 	= 0.00390625		    LVL1 : / 1
-    //     grid_ROM[1] = 32'h00000800;		// 1/2^(9) 	= 0.0009765625		    LVL2 : / 4
-    //     grid_ROM[2] = 32'h00000200;		// 1/2^(10) = 0.000244140625	    LVL3 : / 32
-    //     grid_ROM[3] = 32'h00000080;		// 1/2^(11) = 0.00006103515625		LVL4 : / 64
+	// FOR (11,16)
+    // reg [N-1:0] grid_ROM [3:0];
+	// reg [N-1:0] grid;
+    // initial begin                       // TODO: change
+    //     grid_ROM[0] = 16'h0008;		// 1/2^(8) 	= 0.00390625		1
+    //     grid_ROM[1] = 16'h0004;		// 1/2^(9) 	= 0.001953125		0.5
+    //     grid_ROM[2] = 16'h0002;		// 1/2^(10) = 0.0009765625		0.25
+    //     grid_ROM[3] = 16'h0001;		// 1/2^(11) = 0.00048828125		0.125
     // end
+	// FOR (21,32)
+	reg [N-1:0] grid_ROM [3:0];
+    reg [N-1:0] grid;
+    initial begin
+        grid_ROM[0] = 32'h00002000;		// 1/2^(8) 	= 0.00390625		    LVL1 : / 1
+        grid_ROM[1] = 32'h00000800;		// 1/2^(9) 	= 0.0009765625		    LVL2 : / 4
+        grid_ROM[2] = 32'h00000200;		// 1/2^(10) = 0.000244140625	    LVL3 : / 32
+        grid_ROM[3] = 32'h00000080;		// 1/2^(11) = 0.00006103515625		LVL4 : / 64
+    end
 
     // Zoom Level param
     parameter LVL0 = 2'b00;

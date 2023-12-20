@@ -93,9 +93,16 @@ module HDMI_TOP(
     parameter LVL3 = 2'b11;
     wire [1:0] zoom_level, zoom_level_last;
 
+    // parameter Q = 11;
+    // parameter N = 16;
+    // parameter P = 24;  // For under 16-bit precision
 
-    wire [15:0] real_coord_X, real_coord_Y;
-    ZMU #(11, 16, 24) Zoom_Manegement_Unit(
+    parameter Q = 21;
+    parameter N = 32;
+    parameter P = 32; 
+
+    wire [N-1:0] real_coord_X, real_coord_Y;
+    ZMU #(Q, N, P) Zoom_Manegement_Unit(
         .clk(CLK),
         .rst(rst),
         .pixel_coord_X(sprite_x_pos),
@@ -124,7 +131,7 @@ module HDMI_TOP(
     (*KEEP="true"*) wire [16:0] addr;
     (*KEEP="true"*) wire [31:0] dout;
 
-    MBT_engine engine(
+    MBT_engine #(Q, N, P) engine(
         .clk_fast(CLK),
         .rst(MBT_engine_rst),
         .x_min(real_coord_X),

@@ -64,8 +64,12 @@ module MBT_ALU #(
     reg [6:0] iter;
 
 	// To check if it is in the MandelBrot set
-	localparam TWO = 16'h1000;
-	localparam FOUR = 16'h2000;
+	// FOR (11,16)
+	// localparam TWO = 16'h1000;					// TODO: cahnge
+	// localparam FOUR = 16'h2000;
+	// FOR (21,32)
+	localparam TWO = 32'h00400000;
+	localparam FOUR = 32'h00800000;
 
 	wire [N-1:0] threshold_w;
 	reg [N-1:0] threshold_r;
